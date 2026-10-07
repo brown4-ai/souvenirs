@@ -1,0 +1,665 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1D4E9E">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Souvenirs">
+<title>Souvenirs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one narrow column. Airmail-stripe header, People/Eaten tabs, an always-open quick-add card, then a searchable ledger, newest first. */
+:root {
+  color-scheme: light;
+  --bg: #F2F4F5;
+  --surface: #FFFFFF;
+  --field: #F7F9FA;
+  --fg: #14212B;
+  --muted: #5B6B76;
+  --line: #D5DCE0;
+  --accent: #1D4E9E;
+  --accent-fg: #FFFFFF;
+  --red: #C9372C;
+  --font-display: "Bricolage Grotesque", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0E161C; --surface: #16222B; --field: #101A21; --fg: #E8EEF2; --muted: #93A4B0;
+    --line: #2A3944; --accent: #6FA2F0; --accent-fg: #0B1620; --red: #F0766B; color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); background: var(--bg); }
+[hidden] { display: none !important; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font-family: var(--font-body); font-size: 15px; line-height: 1.45;
+  padding-inline: 16px; padding-block: 0 48px;
+}
+img { max-width: 100%; }
+.wrap { max-width: 640px; margin-inline: auto; display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.stripe {
+  height: 8px; margin-inline: -16px;
+  background: repeating-linear-gradient(-45deg, var(--red) 0 14px, var(--surface) 14px 22px, var(--accent) 22px 36px, var(--surface) 36px 44px);
+}
+header { display: flex; flex-direction: column; gap: 4px; padding-top: 4px; }
+h1 { font-family: var(--font-display); font-weight: 700; font-size: 2.1rem; letter-spacing: -0.02em; line-height: 1.05; margin: 0; text-wrap: balance; }
+.sub { font-family: var(--font-mono); font-size: 12px; color: var(--muted); letter-spacing: 0.02em; }
+
+.tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+.tabs button { border: none; background: none; padding: 9px 12px; border-radius: 7px; font-weight: 600; color: var(--muted); display: flex; gap: 8px; justify-content: center; align-items: baseline; }
+.tabs button[aria-selected="true"] { background: var(--accent); color: var(--accent-fg); }
+.tabs .n { font-family: var(--font-mono); font-size: 12px; font-weight: 500; opacity: 0.85; font-variant-numeric: tabular-nums; }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.card h2 { font-family: var(--font-display); font-size: 1.05rem; margin: 0; font-weight: 600; }
+form, .fields { display: flex; flex-direction: column; gap: 12px; }
+.grid { display: grid; gap: 12px; }
+.grid.na { grid-template-columns: 1fr 84px; }
+.grid.wd { grid-template-columns: 1fr 1fr; }
+.field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+label, .lab { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+input, textarea {
+  font: inherit; font-size: 16px; color: var(--fg); background: var(--field);
+  border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; width: 100%; min-width: 0;
+}
+textarea { resize: vertical; min-height: 64px; }
+input::placeholder, textarea::placeholder { color: var(--muted); opacity: 0.75; }
+input:focus-visible, textarea:focus-visible, button:focus-visible, summary:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+details summary { cursor: pointer; font-size: 13px; color: var(--accent); font-weight: 500; width: fit-content; padding-block: 2px; }
+details[open] summary { margin-bottom: 12px; }
+.more { display: flex; flex-direction: column; gap: 12px; }
+
+.thumbs, .strip { display: flex; flex-wrap: wrap; gap: 8px; }
+.thumbs:empty { display: none; }
+.thumb { position: relative; width: 72px; height: 72px; }
+.thumb img, .strip img { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); display: block; background: var(--field); }
+.thumb .x { position: absolute; top: -6px; right: -6px; width: 24px; height: 24px; padding: 0; border-radius: 50%; line-height: 1; font-size: 14px; background: var(--surface); border: 1px solid var(--line); }
+.strip button { padding: 0; border: none; background: none; border-radius: 8px; }
+.strip img { width: 64px; height: 64px; }
+
+.actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+button { font: inherit; cursor: pointer; border-radius: 8px; padding: 10px 16px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); font-weight: 500; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); font-weight: 600; flex: 1 1 auto; }
+button.danger { color: var(--red); border-color: var(--red); margin-left: auto; }
+button.danger.armed { background: var(--red); color: var(--surface); }
+button:disabled { opacity: 0.6; cursor: default; }
+.status { font-size: 13px; color: var(--muted); min-height: 1.2em; }
+.status.err { color: var(--red); }
+
+.listhead { display: flex; flex-direction: column; gap: 10px; }
+ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+li.item { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; }
+.body { display: flex; flex-direction: column; gap: 6px; min-width: 0; flex: 1 1 auto; }
+.name { font-family: var(--font-display); font-weight: 600; font-size: 1.15rem; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.meta { font-family: var(--font-mono); font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.note { overflow-wrap: anywhere; white-space: pre-wrap; }
+.done { overflow-wrap: anywhere; white-space: pre-wrap; display: flex; flex-direction: column; gap: 2px; }
+.done .lab { font-size: 10px; }
+.contact { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-family: var(--font-mono); font-size: 13px; }
+.contact span { overflow-wrap: anywhere; user-select: all; }
+.linkbtn { border: none; background: none; padding: 4px 0; color: var(--accent); font-size: 13px; font-weight: 500; }
+li.item > .linkbtn { flex: 0 0 auto; padding: 4px 2px; }
+.empty { border: 1.5px dashed var(--line); border-radius: 10px; padding: 28px 20px; text-align: center; color: var(--muted); display: flex; flex-direction: column; gap: 6px; }
+.empty strong { font-family: var(--font-display); font-size: 1.1rem; color: var(--fg); font-weight: 600; }
+.backup { display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 16px; }
+.backup .actions button { flex: 1 1 auto; }
+
+.box { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.88); display: flex; flex-direction: column; gap: 12px; align-items: center; justify-content: center; padding: 16px; z-index: 10; }
+.box img { max-width: 100%; max-height: 80%; object-fit: contain; border-radius: 6px; }
+.box button { background: #fff; color: #14212B; border-color: #fff; }
+
+@media (max-width: 420px) { .grid.wd { grid-template-columns: 1fr; } h1 { font-size: 1.8rem; } }
+@media (prefers-reduced-motion: no-preference) { button { transition: background-color .12s, color .12s; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="stripe" aria-hidden="true"></div>
+  <header>
+    <h1>Souvenirs</h1>
+    <div class="sub" id="count">0 people</div>
+  </header>
+
+  <div class="tabs" role="tablist" id="tabs" aria-label="Section"></div>
+
+  <section class="card" aria-labelledby="formtitle">
+    <h2 id="formtitle">Add someone</h2>
+    <form id="form" autocomplete="off">
+      <div class="fields" id="fields"></div>
+      <div class="field" id="photoblock">
+        <span class="lab">Photos</span>
+        <div class="thumbs" id="thumbs"></div>
+        <div><button type="button" id="addphoto">Add photos</button><input id="f-photos" type="file" accept="image/*" multiple hidden></div>
+      </div>
+      <div class="actions">
+        <button type="submit" class="primary" id="save">Add</button>
+        <button type="button" id="cancel" hidden>Cancel</button>
+        <button type="button" class="danger" id="del" hidden>Delete</button>
+      </div>
+      <div class="status" id="status" role="status" aria-live="polite"></div>
+    </form>
+  </section>
+
+  <section class="listhead" aria-label="List">
+    <input id="q" type="search" aria-label="Search" placeholder="Search">
+    <ul id="list"></ul>
+  </section>
+
+  <section class="backup" aria-label="Backup">
+    <span>Everything is saved on this phone only. Save a backup file now and then, in case you clear your browser data or change phones.</span>
+    <div class="actions">
+      <button type="button" id="export">Save backup</button>
+      <button type="button" id="import">Restore backup</button>
+      <input id="f-import" type="file" accept="application/json,.json" hidden>
+    </div>
+    <div class="status" id="bstatus" role="status" aria-live="polite"></div>
+  </section>
+  <datalist id="places"></datalist>
+</div>
+
+<div class="box" id="box" hidden>
+  <img id="boximg" alt="">
+  <button type="button" id="boxclose">Close</button>
+</div>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var MAXP = 6;
+
+  var SECTIONS = [
+    {
+      id: "people", tab: "People", one: "person", many: "people", dateKey: "met",
+      addTitle: "Add someone", editTitle: "Edit person", search: "Search names, places, notes",
+      empty: ["No one on the list yet", "Add a name above. Everything else is optional."],
+      fields: [
+        { key: "name", label: "Name", ph: "Marta from the hostel", req: 1, row: "na" },
+        { key: "age", label: "Age", ph: "28", inputmode: "numeric", row: "na" },
+        { key: "where", label: "Locality", ph: "Lisbon, Portugal", list: 1, keep: 1, row: "wd" },
+        { key: "met", label: "Date met", type: "date", keep: 1, row: "wd" },
+        { key: "note", label: "Note", type: "area", ph: "Surfs, works in logistics, recommended the tram 28 route" },
+        { key: "done", label: "Things we did", type: "area", ph: "Walked Alfama, shared a pastel de nata, took the night train to Porto" },
+        { key: "contact", label: "Handle, email or phone", ph: "@marta.k or +351 …", more: "Contact details" }
+      ],
+      meta: function (x) { return [x.age ? "Age " + x.age : "", x.where, fmtDate(x.met)]; },
+      extras: [{ key: "note" }, { key: "done", label: "Things we did" }]
+    },
+    {
+      id: "food", tab: "Eaten", one: "dish", many: "dishes", dateKey: "date",
+      addTitle: "Add a dish", editTitle: "Edit dish", search: "Search dishes, places, notes",
+      empty: ["Nothing eaten yet", "Add the first dish above. Everything but the name is optional."],
+      fields: [
+        { key: "name", label: "Dish", ph: "Pastel de nata", req: 1 },
+        { key: "place", label: "Restaurant or stall", ph: "Pastéis de Belém" },
+        { key: "where", label: "Locality", ph: "Lisbon, Portugal", list: 1, keep: 1, row: "wd" },
+        { key: "date", label: "Date eaten", type: "date", keep: 1, row: "wd" },
+        { key: "note", label: "Notes", type: "area", ph: "Warm, cinnamon on top, 20 minute queue" }
+      ],
+      meta: function (x) { return [x.place, x.where, fmtDate(x.date)]; },
+      extras: [{ key: "note" }]
+    }
+  ];
+  var byId = {}, state = {};
+  SECTIONS.forEach(function (s) { byId[s.id] = s; state[s.id] = { items: [], store: null }; });
+  var cur = SECTIONS[0];
+  try { var t = localStorage.getItem("met-abroad-tab"); if (t && byId[t]) cur = byId[t]; } catch (e) {}
+
+  var editingId = null, photos = [], origPhotos = [], busy = 0, armTimer = null, urls = {};
+  var photosOn = typeof indexedDB !== "undefined";
+
+  function todayStr() {
+    var d = new Date();
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+  function fmtDate(s) {
+    if (!s) return "";
+    var p = s.split("-");
+    if (p.length !== 3) return s;
+    return new Date(+p[0], +p[1] - 1, +p[2]).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" });
+  }
+  function setStatus(msg, isErr) {
+    var s = $("status"); s.textContent = msg || ""; s.className = "status" + (isErr ? " err" : "");
+  }
+  function setBStatus(msg, isErr) {
+    var s = $("bstatus"); s.textContent = msg || ""; s.className = "status" + (isErr ? " err" : "");
+  }
+
+  /* ---------- text storage (localStorage) ---------- */
+  function localStore(key) {
+    var subs = [], mem = [];
+    try { mem = JSON.parse(localStorage.getItem(key) || "[]"); } catch (e) { mem = []; }
+    function persist() {
+      try { localStorage.setItem(key, JSON.stringify(mem)); return true; }
+      catch (e) { return false; }
+    }
+    function emit() { subs.forEach(function (f) { f(mem.slice()); }); }
+    return {
+      subscribe: function (f) { subs.push(f); f(mem.slice()); },
+      save: function (rec) {
+        var before = mem;
+        if (rec.id) { mem = mem.map(function (x) { return x.id === rec.id ? rec : x; }); }
+        else { rec.id = "p" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); mem = [rec].concat(mem); }
+        if (!persist()) { mem = before; return Promise.reject(new Error("storage")); }
+        emit(); return Promise.resolve();
+      },
+      remove: function (id) { mem = mem.filter(function (x) { return x.id !== id; }); persist(); emit(); return Promise.resolve(); },
+      merge: function (list) {
+        var have = {}; mem.forEach(function (x) { have[x.id] = 1; });
+        var added = list.filter(function (x) { return x && x.id && !have[x.id]; });
+        mem = mem.concat(added); persist(); emit(); return added.length;
+      }
+    };
+  }
+  SECTIONS.forEach(function (s) { state[s.id].store = localStore("met-abroad-" + s.id); });
+
+  /* ---------- photo storage (IndexedDB) ---------- */
+  var dbp = null;
+  function getDb() {
+    if (!dbp) dbp = new Promise(function (res, rej) {
+      var r = indexedDB.open("met-abroad", 1);
+      r.onupgradeneeded = function () { r.result.createObjectStore("photos"); };
+      r.onsuccess = function () { res(r.result); };
+      r.onerror = function () { rej(r.error); };
+    });
+    return dbp;
+  }
+  function putPhoto(id, blob) {
+    return getDb().then(function (d) {
+      return new Promise(function (res, rej) {
+        var tx = d.transaction("photos", "readwrite"); tx.objectStore("photos").put(blob, id);
+        tx.oncomplete = res; tx.onerror = function () { rej(tx.error); }; tx.onabort = function () { rej(tx.error); };
+      });
+    });
+  }
+  function getPhoto(id) {
+    return getDb().then(function (d) {
+      return new Promise(function (res, rej) {
+        var rq = d.transaction("photos").objectStore("photos").get(id);
+        rq.onsuccess = function () { res(rq.result || null); }; rq.onerror = function () { rej(rq.error); };
+      });
+    });
+  }
+  function delPhoto(id) {
+    if (urls[id]) { try { URL.revokeObjectURL(urls[id]); } catch (e) {} delete urls[id]; }
+    return getDb().then(function (d) {
+      return new Promise(function (res) {
+        var tx = d.transaction("photos", "readwrite"); tx.objectStore("photos").delete(id);
+        tx.oncomplete = res; tx.onerror = res; tx.onabort = res;
+      });
+    }).catch(function () {});
+  }
+  function showPhoto(id, img) {
+    if (urls[id]) { img.src = urls[id]; return; }
+    getPhoto(id).then(function (b) {
+      if (!b) return;
+      if (!urls[id]) urls[id] = URL.createObjectURL(b);
+      img.src = urls[id];
+    }).catch(function () {});
+  }
+
+  /* ---------- form ---------- */
+  function mkField(fd) {
+    var w = document.createElement("div"); w.className = "field";
+    var l = document.createElement("label"); l.htmlFor = "f-" + fd.key; l.textContent = fd.label;
+    var el = document.createElement(fd.type === "area" ? "textarea" : "input");
+    el.id = "f-" + fd.key;
+    if (fd.type !== "area") el.type = fd.type || "text";
+    if (fd.ph) el.placeholder = fd.ph;
+    if (fd.inputmode) el.inputMode = fd.inputmode;
+    if (fd.list) el.setAttribute("list", "places");
+    if (fd.req) el.required = true;
+    w.appendChild(l); w.appendChild(el); return w;
+  }
+
+  function buildForm() {
+    var host = $("fields"); host.textContent = "";
+    $("formtitle").textContent = editingId ? cur.editTitle : cur.addTitle;
+    $("save").textContent = editingId ? "Save" : "Add";
+    $("q").placeholder = cur.search;
+    var f = cur.fields, i = 0, moreHost = null;
+    while (i < f.length) {
+      var fd = f[i];
+      if (fd.more) {
+        if (!moreHost) {
+          var d = document.createElement("details"); d.id = "more";
+          var s = document.createElement("summary"); s.textContent = fd.more;
+          moreHost = document.createElement("div"); moreHost.className = "more";
+          d.appendChild(s); d.appendChild(moreHost); host.appendChild(d);
+        }
+        moreHost.appendChild(mkField(fd)); i++; continue;
+      }
+      if (fd.row) {
+        var row = document.createElement("div"); row.className = "grid " + fd.row;
+        var j = i;
+        while (j < f.length && f[j].row === fd.row) { row.appendChild(mkField(f[j])); j++; }
+        host.appendChild(row); i = j; continue;
+      }
+      host.appendChild(mkField(fd)); i++;
+    }
+    f.forEach(function (x) { if (x.type === "date") $("f-" + x.key).value = todayStr(); });
+  }
+
+  function clearForm(full) {
+    cur.fields.forEach(function (x) {
+      var el = $("f-" + x.key);
+      if (x.type === "date") { if (full) el.value = todayStr(); }
+      else if (full || !x.keep) el.value = "";
+    });
+    photos = []; origPhotos = []; renderThumbs();
+  }
+
+  function setEditUI(on) {
+    $("cancel").hidden = !on; $("del").hidden = !on;
+    $("formtitle").textContent = on ? cur.editTitle : cur.addTitle;
+    $("save").textContent = on ? "Save" : "Add";
+    resetDelete();
+  }
+
+  function resetDelete() {
+    clearTimeout(armTimer);
+    var b = $("del"); b.classList.remove("armed"); b.textContent = "Delete";
+  }
+
+  function renderTabs() {
+    var t = $("tabs"); t.textContent = "";
+    SECTIONS.forEach(function (s) {
+      var b = document.createElement("button"); b.type = "button"; b.setAttribute("role", "tab");
+      b.setAttribute("aria-selected", s === cur ? "true" : "false");
+      var a = document.createElement("span"); a.textContent = s.tab;
+      var n = document.createElement("span"); n.className = "n"; n.textContent = state[s.id].items.length;
+      b.appendChild(a); b.appendChild(n);
+      b.addEventListener("click", function () { switchTo(s); });
+      t.appendChild(b);
+    });
+  }
+
+  function renderPlaces() {
+    var seen = {};
+    SECTIONS.forEach(function (s) { state[s.id].items.forEach(function (x) { if (x.where) seen[x.where.trim().toLowerCase()] = x.where.trim(); }); });
+    var dl = $("places"); dl.textContent = "";
+    Object.keys(seen).sort().forEach(function (k) { var o = document.createElement("option"); o.value = seen[k]; dl.appendChild(o); });
+  }
+
+  function renderThumbs() {
+    var t = $("thumbs"); t.textContent = "";
+    photos.forEach(function (id) {
+      var w = document.createElement("div"); w.className = "thumb";
+      var im = document.createElement("img"); im.alt = ""; showPhoto(id, im);
+      var x = document.createElement("button"); x.type = "button"; x.className = "x"; x.textContent = "×";
+      x.setAttribute("aria-label", "Remove photo");
+      x.addEventListener("click", function () {
+        photos = photos.filter(function (p) { return p !== id; });
+        if (origPhotos.indexOf(id) === -1) delPhoto(id);
+        renderThumbs();
+      });
+      w.appendChild(im); w.appendChild(x); t.appendChild(w);
+    });
+    $("addphoto").disabled = photos.length >= MAXP;
+  }
+
+  function discardUnsaved() {
+    photos.forEach(function (id) { if (origPhotos.indexOf(id) === -1) delPhoto(id); });
+  }
+
+  function shrink(file) {
+    return new Promise(function (res, rej) {
+      var url = URL.createObjectURL(file), img = new Image();
+      img.onload = function () {
+        var w = img.naturalWidth, h = img.naturalHeight, s = Math.min(1, 1400 / Math.max(w, h));
+        var c = document.createElement("canvas"); c.width = Math.round(w * s); c.height = Math.round(h * s);
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url);
+        c.toBlob(function (b) { b ? res(b) : rej(new Error("encode")); }, "image/jpeg", 0.82);
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); rej(new Error("read")); };
+      img.src = url;
+    });
+  }
+
+  async function addFiles(files) {
+    if (!photosOn) return;
+    var list = Array.prototype.slice.call(files), room = MAXP - photos.length;
+    if (list.length > room) setStatus("Up to " + MAXP + " photos per entry.");
+    list = list.slice(0, Math.max(room, 0));
+    busy++; $("save").disabled = true;
+    for (var i = 0; i < list.length; i++) {
+      try {
+        var blob = await shrink(list[i]);
+        var id = "ph" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+        await putPhoto(id, blob);
+        urls[id] = URL.createObjectURL(blob);
+        photos.push(id); renderThumbs();
+      } catch (e) { setStatus("Could not add that photo. Your phone may be low on storage.", true); }
+    }
+    busy--; if (!busy) $("save").disabled = false;
+  }
+
+  /* ---------- list ---------- */
+  function render() {
+    var q = $("q").value.trim().toLowerCase();
+    var items = state[cur.id].items, dk = cur.dateKey;
+    var sorted = items.slice().sort(function (a, b) {
+      var am = a[dk] || "", bm = b[dk] || "";
+      if (am !== bm) return am < bm ? 1 : -1;
+      return (b.createdAt || 0) - (a.createdAt || 0);
+    });
+    var places = {};
+    items.forEach(function (x) { if (x.where) places[x.where.trim().toLowerCase()] = 1; });
+    var n = items.length, pn = Object.keys(places).length;
+    $("count").textContent = n + " " + (n === 1 ? cur.one : cur.many) + (pn ? " · " + pn + (pn === 1 ? " place" : " places") : "");
+
+    var shown = sorted.filter(function (x) {
+      if (!q) return true;
+      return Object.keys(x).filter(function (k) { return k !== "id" && typeof x[k] === "string"; })
+        .map(function (k) { return x[k]; }).join(" ").toLowerCase().indexOf(q) !== -1;
+    });
+
+    var ul = $("list"); ul.textContent = "";
+    if (!shown.length) {
+      var li = document.createElement("li"); li.className = "empty";
+      var t = document.createElement("strong"), d = document.createElement("span");
+      if (n === 0) { t.textContent = cur.empty[0]; d.textContent = cur.empty[1]; }
+      else { t.textContent = "No matches"; d.textContent = "Nothing matches that search."; }
+      li.appendChild(t); li.appendChild(d); ul.appendChild(li); return;
+    }
+    shown.forEach(function (x) {
+      var li = document.createElement("li"); li.className = "item";
+      var body = document.createElement("div"); body.className = "body";
+      var nm = document.createElement("div"); nm.className = "name"; nm.textContent = x.name || "Unnamed";
+      body.appendChild(nm);
+      var bits = cur.meta(x).filter(Boolean).join(" · ");
+      if (bits) { var m = document.createElement("div"); m.className = "meta"; m.textContent = bits; body.appendChild(m); }
+      cur.extras.forEach(function (ex) {
+        if (!x[ex.key]) return;
+        if (ex.label) {
+          var dn = document.createElement("div"); dn.className = "done";
+          var lb = document.createElement("span"); lb.className = "lab"; lb.textContent = ex.label;
+          var tx = document.createElement("span"); tx.textContent = x[ex.key];
+          dn.appendChild(lb); dn.appendChild(tx); body.appendChild(dn);
+        } else {
+          var nt = document.createElement("div"); nt.className = "note"; nt.textContent = x[ex.key]; body.appendChild(nt);
+        }
+      });
+      if (x.photos && x.photos.length) {
+        var st = document.createElement("div"); st.className = "strip";
+        x.photos.forEach(function (id) {
+          var pb = document.createElement("button"); pb.type = "button"; pb.setAttribute("aria-label", "View photo");
+          var im = document.createElement("img"); im.alt = ""; showPhoto(id, im);
+          pb.appendChild(im); pb.addEventListener("click", function () { openBox(id); });
+          st.appendChild(pb);
+        });
+        body.appendChild(st);
+      }
+      if (x.contact) {
+        var c = document.createElement("div"); c.className = "contact";
+        var sp = document.createElement("span"); sp.textContent = x.contact;
+        var cb = document.createElement("button"); cb.type = "button"; cb.className = "linkbtn"; cb.textContent = "Copy";
+        cb.addEventListener("click", function () {
+          try {
+            navigator.clipboard.writeText(x.contact).then(function () { cb.textContent = "Copied"; setTimeout(function () { cb.textContent = "Copy"; }, 1400); }, function () {});
+          } catch (e) {}
+        });
+        c.appendChild(sp); c.appendChild(cb); body.appendChild(c);
+      }
+      var eb = document.createElement("button"); eb.type = "button"; eb.className = "linkbtn"; eb.textContent = "Edit";
+      eb.setAttribute("aria-label", "Edit " + (x.name || cur.one));
+      eb.addEventListener("click", function () { startEdit(x); });
+      li.appendChild(body); li.appendChild(eb); ul.appendChild(li);
+    });
+  }
+
+  function openBox(id) { showPhoto(id, $("boximg")); $("box").hidden = false; }
+  function closeBox() { $("box").hidden = true; $("boximg").removeAttribute("src"); }
+  $("box").addEventListener("click", function (e) { if (e.target !== $("boximg")) closeBox(); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !$("box").hidden) closeBox(); });
+
+  function startEdit(x) {
+    if (editingId) { discardUnsaved(); }
+    editingId = x.id;
+    var hasMore = false;
+    cur.fields.forEach(function (fd) {
+      $("f-" + fd.key).value = x[fd.key] || "";
+      if (fd.more && x[fd.key]) hasMore = true;
+    });
+    var dt = cur.fields.filter(function (fd) { return fd.type === "date"; })[0];
+    if (dt && !x[dt.key]) $("f-" + dt.key).value = "";
+    if ($("more")) $("more").open = hasMore;
+    photos = (x.photos || []).slice(); origPhotos = photos.slice(); renderThumbs();
+    setEditUI(true); setStatus("");
+    $("formtitle").scrollIntoView({ block: "start" });
+    $("f-name").focus({ preventScroll: true });
+  }
+
+  function cancelEdit() {
+    discardUnsaved();
+    editingId = null; clearForm(true); setEditUI(false);
+  }
+
+  function switchTo(s) {
+    if (s === cur) return;
+    if (editingId) cancelEdit(); else discardUnsaved();
+    cur = s;
+    try { localStorage.setItem("met-abroad-tab", s.id); } catch (e) {}
+    $("q").value = "";
+    photos = []; origPhotos = [];
+    buildForm(); renderThumbs(); setEditUI(false); setStatus("");
+    renderTabs(); render();
+  }
+
+  $("addphoto").addEventListener("click", function () { $("f-photos").click(); });
+  $("f-photos").addEventListener("change", function (e) { var fl = e.target.files; addFiles(fl).then(function () { e.target.value = ""; }); });
+
+  $("form").addEventListener("submit", async function (ev) {
+    ev.preventDefault();
+    var rec = {};
+    cur.fields.forEach(function (fd) {
+      var v = $("f-" + fd.key).value.trim();
+      rec[fd.key] = fd.type === "date" ? (v || todayStr()) : v;
+    });
+    if (!rec.name) { setStatus("Enter a " + (cur.id === "food" ? "dish" : "name") + ".", true); return; }
+    rec.photos = photos.slice();
+    rec.createdAt = Date.now();
+    if (editingId) {
+      rec.id = editingId;
+      var old = state[cur.id].items.filter(function (x) { return x.id === editingId; })[0];
+      if (old && old.createdAt) rec.createdAt = old.createdAt;
+    }
+    $("save").disabled = true;
+    try {
+      await state[cur.id].store.save(rec);
+      try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
+      origPhotos.forEach(function (id) { if (rec.photos.indexOf(id) === -1) delPhoto(id); });
+      var wasEdit = !!editingId;
+      editingId = null; clearForm(false); setEditUI(false);
+      setStatus(wasEdit ? "Saved " + rec.name + "." : "Added " + rec.name + ". Locality and date are kept for the next one.");
+      $("f-name").focus({ preventScroll: true });
+    } catch (e) {
+      setStatus("Could not save. Your browser may be out of storage or blocking it.", true);
+    }
+    $("save").disabled = busy > 0;
+  });
+
+  $("cancel").addEventListener("click", function () { cancelEdit(); setStatus(""); });
+
+  $("del").addEventListener("click", async function () {
+    var b = $("del");
+    if (!b.classList.contains("armed")) {
+      b.classList.add("armed"); b.textContent = "Tap again to delete";
+      armTimer = setTimeout(resetDelete, 4000); return;
+    }
+    try {
+      var old = state[cur.id].items.filter(function (x) { return x.id === editingId; })[0];
+      await state[cur.id].store.remove(editingId);
+      if (old && old.photos) old.photos.forEach(delPhoto);
+      editingId = null; clearForm(true); setEditUI(false); setStatus("Deleted.");
+    } catch (e) { setStatus("Could not delete. Try again.", true); resetDelete(); }
+  });
+
+  $("q").addEventListener("input", render);
+
+  /* ---------- backup ---------- */
+  function blobToDataURL(b) {
+    return new Promise(function (res, rej) { var r = new FileReader(); r.onload = function () { res(r.result); }; r.onerror = function () { rej(r.error); }; r.readAsDataURL(b); });
+  }
+
+  $("export").addEventListener("click", async function () {
+    setBStatus("Preparing backup…");
+    try {
+      var out = { app: "met-abroad", version: 1, exported: new Date().toISOString(), sections: {}, photos: {} };
+      var ids = {};
+      SECTIONS.forEach(function (s) {
+        out.sections[s.id] = state[s.id].items;
+        state[s.id].items.forEach(function (x) { (x.photos || []).forEach(function (i) { ids[i] = 1; }); });
+      });
+      var keys = Object.keys(ids);
+      for (var i = 0; i < keys.length; i++) {
+        var b = await getPhoto(keys[i]);
+        if (b) out.photos[keys[i]] = await blobToDataURL(b);
+      }
+      var file = new Blob([JSON.stringify(out)], { type: "application/json" });
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(file); a.download = "souvenirs-backup-" + todayStr() + ".json";
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 5000);
+      setBStatus("Backup saved to your downloads.");
+    } catch (e) { setBStatus("Could not make the backup.", true); }
+  });
+
+  $("import").addEventListener("click", function () { $("f-import").click(); });
+  $("f-import").addEventListener("change", async function (e) {
+    var f = e.target.files && e.target.files[0]; if (!f) return;
+    setBStatus("Restoring…");
+    try {
+      var data = JSON.parse(await f.text());
+      if (!data || data.app !== "met-abroad" || !data.sections) throw new Error("format");
+      var ids = Object.keys(data.photos || {});
+      for (var i = 0; i < ids.length; i++) {
+        var blob = await (await fetch(data.photos[ids[i]])).blob();
+        await putPhoto(ids[i], blob);
+      }
+      var added = 0;
+      SECTIONS.forEach(function (s) { added += state[s.id].store.merge(data.sections[s.id] || []); });
+      setBStatus("Restored " + added + (added === 1 ? " entry." : " entries."));
+    } catch (err) { setBStatus("That file is not a Souvenirs backup.", true); }
+    e.target.value = "";
+  });
+
+  if (!photosOn) $("photoblock").hidden = true;
+  buildForm(); renderThumbs();
+  SECTIONS.forEach(function (s) {
+    state[s.id].store.subscribe(function (list) { state[s.id].items = list; renderTabs(); renderPlaces(); if (s === cur) render(); });
+  });
+  renderTabs(); render();
+})();
+</script>
+</body>
+</html>
